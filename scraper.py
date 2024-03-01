@@ -23,6 +23,7 @@ def safe_request(url):
         logging.error(f"Request failed: {e}")
         return None
 
+@cache.memoize(timeout=50)  # 缓存时间为50秒
 def find_urls(search_input):
     base_url = os.getenv("BASE_URL", "https://www.hl.co.uk/shares/search-for-investments")
     search_url = f"{base_url}?stock_search_input={search_input}"
@@ -71,7 +72,7 @@ def api_get_stock_info(search_input):
         return jsonify({'error': 'Missing search input'}), 400
     try:
         results = {}
-        urls = find_urls(search_input)
+        urls = find_urls(search_input.lower())
         for url in urls:
             stock_name, stock_info = get_stock_info(url)
             if stock_name:  # Ensure stock_name is not empty
