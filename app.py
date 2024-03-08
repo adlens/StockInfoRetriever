@@ -1,13 +1,14 @@
 import logging
 import os
-from flask import Flask, request, jsonify, url_for
+from flask import Flask, request, jsonify
 from flask_caching import Cache
 from scraper import find_urls, get_stock_info, load_search_results
 
 app = Flask(__name__)
-app.config['CACHE_TYPE'] = 'simple'
+app.config['CACHE_TYPE'] = 'redis'
+app.config['CACHE_REDIS_URL'] = 'redis://localhost:6379/0'  # Default Redis connection URL
 cache = Cache(app)
-cache.init_app(app)
+cache.init_app(app, config={'CACHE_TYPE': 'redis', 'CACHE_REDIS_URL': 'redis://localhost:6379/0'})
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,7 +16,7 @@ search_results_file = 'search_results.json'
 search_results = load_search_results(search_results_file)
 
 @app.route('/get_stock_info/<search_input>', methods=['GET'])
-@cache.memoize(timeout=50)
+@cache.memoize(timeout=300)  # Cache data for 5 minutes
 def api_get_stock_info(search_input):
     if not search_input:
         return jsonify({'error': 'Missing search input'}), 400
