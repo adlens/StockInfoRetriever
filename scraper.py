@@ -1,17 +1,8 @@
 import os
-import logging
 import requests
 import json
 from bs4 import BeautifulSoup
-from flask import Flask, request, jsonify, url_for
-from flask_caching import Cache
-
-app = Flask(__name__)
-app.config['CACHE_TYPE'] = 'simple'
-cache = Cache(app)
-cache.init_app(app)
-
-logging.basicConfig(level=logging.INFO)
+import logging
 
 session = requests.Session()
 
@@ -24,51 +15,35 @@ def safe_request(url):
         logging.error(f"Request failed: {e}")
         return None
 
-def load_search_results():
-    # Load saved seaching url results from JSON file
-    if os.path.exists(search_results_file):
-        with open(search_results_file, 'r') as file:
+def load_search_results(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
             return json.load(file)
     else:
         return {}
 
-def save_search_results():
-    # Update the url results in JSON
-    with open(search_results_file, 'w') as file:
+def save_search_results(file_path, search_results):
+    with open(file_path, 'w') as file:
         json.dump(search_results, file)
 
-
-def update_search_results(search_input, urls):
-    # Add or update search results and maintain size limit
-    global search_results
+def update_search_results(search_input, urls, search_results, file_path):
     dict_size = 100
-    # Increment count if exists, else add new entry with count 1
     if search_input in search_results:
         search_results[search_input]['urls'] = urls
         search_results[search_input]['count'] += 1
     else:
         search_results[search_input] = {'urls': urls, 'count': 1}
-    
-    # Check size and remove the least frequently used if necessary
-    
+
     if len(search_results) > dict_size:
-        # Find the search input with the minimum count
         least_used = min(search_results.keys(), key=lambda k: search_results[k]['count'])
         del search_results[least_used]
-    save_search_results()
+    save_search_results(file_path, search_results)
 
-
-search_results_file = 'search_results.json'
-search_results = load_search_results()
-
-def find_urls(search_input):
-    global search_results
-    # If search_input is already recorded, directly return the results
-    if search_input in search_results:  
-        search_results[search_input]['count'] += 1  # Update count every time it's accessed
-        save_search_results()
+def find_urls(search_input, base_url, search_results, file_path):
+    if search_input in search_results:
+        search_results[search_input]['count'] += 1
+        save_search_results(file_path, search_results)
         return search_results[search_input]['urls']
-    base_url = os.getenv("BASE_URL", "https://www.hl.co.uk/shares/search-for-investments")
     search_url = f"{base_url}?stock_search_input={search_input}"
     response = safe_request(search_url)
     urls = []
@@ -82,7 +57,7 @@ def find_urls(search_input):
                 if link_element:
                     urls.append(link_element['href'])
     if urls:
-        update_search_results(search_input, urls)
+        update_search_results(search_input, urls, search_results, file_path)
     return urls
 
 def get_stock_info(stock_url):
@@ -109,22 +84,3 @@ def get_stock_info(stock_url):
                     continue
                 security_info[tag_value] = value
     return final_name, security_info
-
-@app.route('/get_stock_info/<search_input>', methods=['GET'])
-@cache.memoize(timeout=50)
-def api_get_stock_info(search_input):
-    if not search_input:
-        return jsonify({'error': 'Missing search input'}), 400
-    try:
-        results = {}
-        urls = find_urls(search_input.lower())
-        for url in urls:
-            stock_name, stock_info = get_stock_info(url)
-            if stock_name:  # Ensure stock_name is not empty
-                results[stock_name] = stock_info
-        return jsonify(results), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
