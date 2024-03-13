@@ -1,6 +1,7 @@
 FROM python:3.9-slim
 WORKDIR /app
 COPY . /app
-RUN pip install pipenv && pipenv install --deploy --system
-RUN pipenv run pip install redis
+RUN pip3 install pipenv
+COPY Pipfile Pipfile.lock ./
+RUN pipenv install --deploy --system
 CMD ["python", "app.py"]
