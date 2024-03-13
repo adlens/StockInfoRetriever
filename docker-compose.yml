@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  app:
+    image: stock_info_retriever
+    ports:
+      - "5001:5000"
+    environment:
+      - CACHE_REDIS_URL=redis://redis:6379/0
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
