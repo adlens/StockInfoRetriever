@@ -60,27 +60,25 @@ def find_urls(search_input, base_url, search_results, file_path):
         update_search_results(search_input, urls, search_results, file_path)
     return urls
 
-def get_stock_info(stock_url):
-    response = safe_request(stock_url)
+def get_stock_info(response):
     final_name, security_info = "", {}
-    if response:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        stock_name = soup.find('h1')
-        if stock_name:
-            cleaned_name = ' '.join(stock_name.text.strip().split())
-            final_name = cleaned_name
-            security_details = soup.find("div", id="security-detail")
-            nested_divs = security_details.select('div div')
-            for div in nested_divs:
-                tag = div.find('span')
-                if tag:
-                    tag_value = tag.text.strip()
-                else:
-                    continue
-                value = div.find('strong')
-                if value:
-                    value = value.text.strip()
-                else:
-                    continue
-                security_info[tag_value] = value
+    soup = BeautifulSoup(response.text, 'html.parser')
+    stock_name = soup.find('h1')
+    if stock_name:
+        cleaned_name = ' '.join(stock_name.text.strip().split())
+        final_name = cleaned_name
+        security_details = soup.find("div", id="security-detail")
+        nested_divs = security_details.select('div div')
+        for div in nested_divs:
+            tag = div.find('span')
+            if tag:
+                tag_value = tag.text.strip()
+            else:
+                continue
+            value = div.find('strong')
+            if value:
+                value = value.text.strip()
+            else:
+                continue
+            security_info[tag_value] = value
     return final_name, security_info

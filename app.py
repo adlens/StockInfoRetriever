@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from scraper import find_urls, get_stock_info, load_search_results
+from scraper import find_urls, get_stock_info, load_search_results, safe_request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 import os
@@ -28,15 +28,16 @@ def api_get_stock_info(search_input):
         
         results = {}
         with ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_url = {executor.submit(get_stock_info, url): url for url in urls}
-            for future in as_completed(future_to_url):
-                url = future_to_url[future]
+            future_to_response = {executor.submit(safe_request, url): url for url in urls}
+            for future in as_completed(future_to_response):
                 try:
-                    stock_name, stock_info = future.result()
-                    if stock_name:
-                        results[stock_name] = stock_info
+                    response = future.result()
+                    if response:
+                        stock_name, stock_info = get_stock_info(response)
+                        if stock_name:
+                            results[stock_name] = stock_info
                 except Exception as exc:
-                    logging.error(f'{url} generated an exception: {exc}')
+                    logging.error(f'An exception is generated: {exc}')
         
         return jsonify(results), 200
     except Exception as e:
