@@ -9,6 +9,7 @@ requests = "*"
 beautifulsoup4 = "*"
 flask-caching = "*"
 redis = "*"
+pytest = "*"
 
 [dev-packages]
 
