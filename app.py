@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from scraper import find_urls, get_stock_info, load_search_results, safe_request
+from scraper import find_urls, get_stock_info, load_search_results, safe_request, save_search_results, update_search_results
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 import os
@@ -23,9 +23,17 @@ def api_get_stock_info(search_input):
         logging.error("Missing search input")
         return jsonify({'error': 'Missing search input'}), 400
     try:
-        base_url = os.getenv("BASE_URL", "https://www.hl.co.uk/shares/search-for-investments")
-        urls = find_urls(search_input.lower(), base_url, search_results, search_results_file)
-        
+        if search_input in search_results:
+            search_results[search_input]['count'] += 1
+            save_search_results(search_results_file, search_results)
+            urls = search_results[search_input]['urls']
+        else:
+            base_url = os.getenv("BASE_URL", "https://www.hl.co.uk/shares/search-for-investments")
+            search_url = f"{base_url}?stock_search_input={search_input}"
+            keyword_search_response = safe_request(search_url)
+            urls = find_urls(keyword_search_response)
+            if urls:
+                update_search_results(search_input, urls, search_results, search_results_file)
         results = {}
         with ThreadPoolExecutor(max_workers=5) as executor:
             future_to_response = {executor.submit(safe_request, url): url for url in urls}
@@ -38,7 +46,6 @@ def api_get_stock_info(search_input):
                             results[stock_name] = stock_info
                 except Exception as exc:
                     logging.error(f'An exception is generated: {exc}')
-        
         return jsonify(results), 200
     except Exception as e:
         logging.error(f"Error processing request: {e}")

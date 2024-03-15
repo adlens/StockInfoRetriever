@@ -39,16 +39,10 @@ def update_search_results(search_input, urls, search_results, file_path):
         del search_results[least_used]
     save_search_results(file_path, search_results)
 
-def find_urls(search_input, base_url, search_results, file_path):
-    if search_input in search_results:
-        search_results[search_input]['count'] += 1
-        save_search_results(file_path, search_results)
-        return search_results[search_input]['urls']
-    search_url = f"{base_url}?stock_search_input={search_input}"
-    response = safe_request(search_url)
+def find_urls(search_page):
     urls = []
-    if response:
-        soup = BeautifulSoup(response.text, 'html.parser')
+    if search_page:
+        soup = BeautifulSoup(search_page.text, 'html.parser')
         stock_list = soup.find('tbody', id="stock_list_tbody")
         if stock_list:
             stocks = stock_list.find_all('tr')
@@ -56,13 +50,11 @@ def find_urls(search_input, base_url, search_results, file_path):
                 link_element = stock.find('td').find('a', href=True)
                 if link_element:
                     urls.append(link_element['href'])
-    if urls:
-        update_search_results(search_input, urls, search_results, file_path)
     return urls
 
-def get_stock_info(response):
+def get_stock_info(stock_info_page):
     final_name, security_info = "", {}
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(stock_info_page.text, 'html.parser')
     stock_name = soup.find('h1')
     if stock_name:
         cleaned_name = ' '.join(stock_name.text.strip().split())
