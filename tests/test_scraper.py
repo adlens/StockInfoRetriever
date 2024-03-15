@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from scraper import find_urls
+from scraper import find_urls, get_stock_info
 
 # A list of test cases, each case is a tuple (html_file_name, expected_urls)
 search_page_data = [
@@ -27,5 +27,30 @@ def test_find_urls(html_file_name, expected_urls):
 
     # Call find_urls with mock response object
     urls = find_urls(mock_response)
-    # print(html_file_name, urls)
+    # Assert that the extracted urls match the expected values
     assert urls == expected_urls, "find_urls did not return the expected URLs"
+
+
+
+stock_info_page_data = [
+    ("test_stock_info_page_sain.html", {"name": "Scottish American Investment Co plc (SAIN) Ordinary 25p Shares", "info": {'Open': '498.00p', 'Trade high': '498.72p', 'Year high': '543.00p', 'Estimated NAV': '554.56', 'Previous close': '497.50p', 'Trade low': '494.83p', 'Year low': '450.00p', 'Premium/Discount': '-9.66%', 'Volume': '170,324', 'Dividend yield': '2.84%', 'Currency': 'GBX'}}),
+    ("test_stock_info_page_amat.html", {"name": "Amati Aim VCT plc (AMAT) Ordinary 5p", "info": {'Open': '86.50p', 'Trade high': '86.00p', 'Year high': '117.00p', 'Estimated NAV': '92.91', 'Previous close': '86.50p', 'Trade low': '86.00p', 'Year low': '86.00p', 'Premium/Discount': '-6.90%', 'Volume': '3,257', 'Dividend yield': '5.78%', 'Currency': 'GBX'}}),
+]
+
+@pytest.mark.parametrize("html_file_name, expected_info", stock_info_page_data)
+def test_get_stock_info(html_file_name, expected_info):
+    # Read stored HTML file for stock information
+    html_file_path = Path(__file__).parent / html_file_name
+    with open(html_file_path, "r") as file:
+        html_content = file.read()
+
+    # Create a mock response object with HTML content
+    mock_response = Mock()
+    mock_response.text = html_content
+
+    # Call get_stock_info with mock response object
+    stock_name, stock_info = get_stock_info(mock_response)
+    print(stock_name, stock_info)
+    # Assert that the extracted stock name and info match the expected values
+    assert stock_name == expected_info['name'], f"Expected stock name '{expected_info['name']}', but got '{stock_name}'"
+    assert stock_info == expected_info['info'], f"Expected stock info {expected_info['info']}, but got {stock_info}"
